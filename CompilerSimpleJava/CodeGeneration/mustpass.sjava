@@ -1,0 +1,7 @@
+void main()
+{ 
+    int inputVar;
+    inputVar = Read(); 
+    inputVar = inputVar + 1; 
+    Print(inputVar); 
+}

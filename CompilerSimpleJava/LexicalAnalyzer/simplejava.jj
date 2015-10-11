@@ -1,0 +1,75 @@
+options {
+  IGNORE_CASE=true;
+}
+
+PARSER_BEGIN(simplejava)
+
+public class simplejava {
+}
+
+PARSER_END(simplejava)
+
+TOKEN_MGR_DECLS : 
+{
+	public static int numcomments = 0;
+}
+
+SKIP : 
+{
+       < " " >
+|      < "\n" >
+|      < "\t" >
+|	   <"//" (~["\n"])* "\n"> 
+}
+
+SKIP : 
+{
+     < "/*" > 	{numcomments++; SwitchTo(IN_COMMENT);}
+}
+
+<IN_COMMENT>
+SKIP :
+{
+
+     < "/*" > 	{numcomments++;}
+|	 < "*/" > {numcomments--; if (numcomments == 0) SwitchTo(DEFAULT);}
+|	 < ~[] >
+}
+
+TOKEN :
+{
+
+       <INTEGER_LITERAL: (["0"-"9"])+>
+|      <COMMA: ",">
+|      <AMERSAND: "&">
+|      <PLUS: "+">
+|      <MINUS: "-">
+|      <MULTIPLY: "*">
+|      <MODULUS: "%">
+|      <PERIOD: ".">
+|      <COLON: ":">
+|      <SEMICOLON: ";">
+|      <EXCLAMATION: "!">
+|      <FSLASH: "/">
+|      <VERTBAR: "|">
+|      <EQUALS: "=">
+|	   <LPAREN: "(">
+|	   <RPAREN: ")">
+|	   <LANGBRACK: "<">
+|	   <RANGBRACK: ">">
+|	   <LBRACK: "[">
+|	   <RBRACK: "]">
+|	   <LBRACE: "{">
+|	   <RBRACE: "}">
+|	   <IF: "if">
+|      <RETURN: "return">
+|      <NEW: "new">
+|      <ELSE: "else">
+|      <FOR: "for">
+|	   <WHILE: "while">
+|	   <DO: "do">
+|	   <CLASS: "class">
+|	   <TRUE: "true">
+|	   <FALSE: "false">
+|      <IDENTIFIER: ["a"-"z"](["a"-"z","0"-"9"])*>
+}

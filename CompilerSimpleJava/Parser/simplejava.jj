@@ -1,0 +1,269 @@
+options {
+  IGNORE_CASE=true;
+}
+
+PARSER_BEGIN(simplejava)
+
+public class simplejava {
+}
+
+PARSER_END(simplejava)
+
+TOKEN_MGR_DECLS : 
+{
+	public static int comments = 0;
+}
+
+SKIP : 
+{
+     < " " >
+|    < "\n" >
+|    < "\t" >
+|    <"//" (~["\n"])* "\n"> 
+}
+
+SKIP : 
+{
+     < "/*" > 	{comments++; SwitchTo(IN_COMMENT);}
+}
+
+<IN_COMMENT>
+SKIP :
+{
+      < "/*" > {comments++;}
+|	  < "*/" > {comments--; if (comments == 0) SwitchTo(DEFAULT);}
+|	  < ~[] >
+}
+
+TOKEN :
+{
+     <INT_LIT: (["0"-"9"])+>
+|    <COMMA: ",">
+|    <PLUS: "+">
+|    <MINUS: "-">
+|    <TIMES: "*">
+|    <DOT: ".">
+|    <SCOLON: ";">
+|    <NOT: "!">
+|    <DIVIDE: "/">
+|    <GETS: "=">
+|    <AND: "&&">
+|    <OR: "||">
+|    <EQUAL: "==">
+|    <NEQ: "!=">
+|    <LEQ: "<=">
+|    <GEQ: ">=">
+|    <LP: "(">
+|    <RP: ")">
+|	 <LESS: "<">
+|	 <GREAT: ">">
+|	 <LBRCK: "[">
+|	 <RBRCK: "]">
+|	 <LBRC: "{">
+|	 <RBRC: "}">
+|	 <IF: "if">
+|    <RETURN_: "return">
+|    <NEW: "new">
+|    <ELSE: "else">
+|    <FOR: "for">
+|	 <WHILE: "while">
+|	 <DO: "do">
+|	 <CLASS: "class">
+|	 <T: "true">
+|	 <F: "false">
+|  	 <PRINT: "print">
+|  	 <PRINTLN: "println">
+|	 <READ: "read">
+|    <ID: ["a"-"z"](["a"-"z","0"-"9","_"])*>
+}
+
+void prog() :
+{}
+{
+     (classDefs())* (funcDecs())*
+}
+
+void varDefs() :  
+{}
+{
+    <ID> identifier() <SCOLON>
+}
+
+void classDefs() : 
+{}
+{
+     <CLASS> <ID> <LBRC> (varDefs())* <RBRC>
+}
+
+void formal() : 
+{}
+{
+	<ID> <ID> (<LBRCK><RBRCK>)* ( <COMMA> <ID> <ID> (<LBRCK><RBRCK>)* )* 
+|	{}
+}
+
+void funcDecs() : 
+{}
+{
+     <ID> <ID> <LP> formal() <RP> ( <SCOLON> | <LBRC> (state())* <RBRC> )
+}
+
+void identifier() :
+{}
+{
+      <ID> ( (<DOT> <ID>) | (<LBRCK> (exp())? <RBRCK>) )*
+}
+
+
+void actual() :
+{}
+{
+	exp() ( <COMMA> exp() )*
+|	{}
+}
+
+void varsAndFuncs() :
+{}
+{
+      <DOT> identifier() 
+|     <LBRCK> (exp())? <RBRCK> ( <LBRCK> (exp())? <RBRCK> | <DOT> <ID> )*
+|	  <LP> actual() <RP> 
+|	  {} 
+}
+
+void exp() :
+{}
+{	 
+	 disjunct()	 
+}
+
+void disjunct() :
+{}
+{
+     conjunct() ( <OR> conjunct() )*
+}
+
+void conjunct() :
+{}
+{
+     negate() ( <AND> negate() )*
+}
+
+void negate() :
+{}
+{
+     <NOT> negate()
+|	 compare() 
+}
+
+void compare() :
+{}
+{
+     addSub() ( ( <EQUAL> | <NEQ> | <LESS> | <LEQ> | <GREAT> | <GEQ> )  addSub() )*
+}
+
+void addSub() :
+{}
+{
+     multDiv() ( (<PLUS> | <MINUS>) multDiv() )*
+}
+
+void multDiv() :
+{}
+{
+     negative() ( (<TIMES> | <DIVIDE>) negative() )*
+}
+
+void negative() :
+{}
+{
+     <MINUS> negative() 
+|	 level1()
+}
+
+void level1() :
+{}
+{
+	 <INT_LIT>
+|	 <T>
+|	 <F>
+|	 <NEW> <ID> ( <LP> <RP> | (<LBRCK> exp() <RBRCK>) (<LBRCK><RBRCK>)* )
+|	 <LP> exp() <RP>
+|	 <READ> <LP> <RP>
+|	 <ID> varsAndFuncs()
+}
+
+void state() :
+{}
+{	
+  	<LBRC> (state())* <RBRC> 
+|   ifState() 
+|	whileLoop() 
+|   doState()
+|	forLoop() 
+|   <RETURN_> (exp())? <SCOLON>
+|	<PRINT> <LP> exp() <RP> <SCOLON>
+|	<PRINTLN> <LP> <RP> <SCOLON>
+|	<ID> ( varDefState() | otherState() otherHelper() )  
+}
+
+void varDefState() :
+{}
+{
+      <ID> (<LBRCK> <RBRCK>)* (<GETS> exp() <SCOLON> | <SCOLON>)
+}
+
+void otherState() :
+{}
+{
+ 	  ( (<DOT> <ID>) | (<LBRCK> (exp())? <RBRCK>) )*
+}
+
+void otherHelper() : 
+{}
+{
+     <SCOLON> 
+|	 ( <PLUS> <PLUS> | <MINUS> <MINUS> ) <SCOLON>
+|	 <GETS> exp() <SCOLON>
+|	 <LP> actual() <RP> <SCOLON>
+}
+
+void ifState() : 
+{}
+{
+     <IF> <LP> exp() <RP> state() ( LOOKAHEAD(1) <ELSE> state() )?
+}
+
+void whileLoop() : 
+{}
+{
+     <WHILE> <LP> exp() <RP> state()
+}
+
+void doState() :
+{}
+{
+    <DO> state() <WHILE> <LP> exp() <RP> <SCOLON>
+}
+
+void forLoop() :
+{}
+{
+	<FOR> <LP> flHelper() exp() <SCOLON> flHelper() <RP> ( state() | <SCOLON> )
+}
+
+void flHelper() : 
+{}
+{
+     identifier() flHelper2()
+|	 <SCOLON>
+}
+
+void flHelper2() : 
+{}
+{
+     identifier() <GETS> exp() <SCOLON>
+|	 <GETS> exp() (<SCOLON>)?
+|	 <PLUS> <PLUS> 
+|    <MINUS> <MINUS>  
+}

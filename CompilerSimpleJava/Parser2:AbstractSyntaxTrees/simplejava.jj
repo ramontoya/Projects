@@ -1,0 +1,330 @@
+options {
+  IGNORE_CASE=true;
+}
+
+PARSER_BEGIN(simplejava)
+
+public class simplejava {
+}
+
+PARSER_END(simplejava)
+
+TOKEN_MGR_DECLS : 
+{
+	public static int comments = 0;
+}
+
+SKIP : 
+{
+     < " " >
+|    < "\n" >
+|    < "\t" >
+|    <"//" (~["\n"])* "\n"> 
+}
+
+SKIP : 
+{
+     < "/*" > 	{comments++; SwitchTo(IN_COMMENT);}
+}
+
+<IN_COMMENT>
+SKIP :
+{
+      < "/*" > {comments++;}
+|	  < "*/" > {comments--; if (comments == 0) SwitchTo(DEFAULT);}
+|	  < ~[] >
+}
+
+TOKEN :
+{
+     <INT_LIT: (["0"-"9"])+>
+|    <COMMA: ",">
+|    <PLUS: "+">
+|    <MINUS: "-">
+|    <TIMES: "*">
+|    <DOT: ".">
+|    <SCOLON: ";">
+|    <NOT: "!">
+|    <DIVIDE: "/">
+|    <GETS: "=">
+|    <AND: "&&">
+|    <OR: "||">
+|    <EQUAL: "==">
+|    <NEQ: "!=">
+|    <LEQ: "<=">
+|    <GEQ: ">=">
+|    <LP: "(">
+|    <RP: ")">
+|	 <LESS: "<">
+|	 <GREAT: ">">
+|	 <LBRCK: "[">
+|	 <RBRCK: "]">
+|	 <LBRC: "{">
+|	 <RBRC: "}">
+|	 <IF: "if">
+|    <RETURN_: "return">
+|    <NEW: "new">
+|    <ELSE: "else">
+|    <FOR: "for">
+|	 <WHILE: "while">
+|	 <DO: "do">
+|	 <CLASS: "class">
+|	 <T: "true">
+|	 <F: "false">
+|  	 <PRINT: "print">
+|  	 <PRINTLN: "println">
+|	 <READ: "read">
+|    <ID: ["a"-"z"](["a"-"z","0"-"9","_"])*>
+}
+
+ASTProgram prog() :
+{ASTClass c; ASTClasses cs; ASTFunctionDefinition f; ASTFunctionDefinitions fs;}
+{
+	 {cs = new ASTClasses(); fs = new ASTFunctionDefinitions();}
+     (c = classDefs() {cs.addElement(c);})* (f = funcDecs() {fs.addElement(f);})*
+     {return new ASTProgram(cs, fs, 1);}
+}
+
+ASTInstanceVariableDef varDefs() :  
+{Token type; Token name; int dim = 0;}
+{
+    type = <ID> name = <ID> (<LBRCK> <RBRCK> {dim++;})* <SCOLON>
+    {return new ASTInstanceVariableDef(type.image, name.image, dim, type.beginLine);}
+}
+
+ASTClass classDefs() : 
+{Token name; ASTInstanceVariableDef v; ASTInstanceVariableDefs vs;}
+{
+	 {vs = new ASTInstanceVariableDefs();}
+     <CLASS> name = <ID> <LBRC> (v = varDefs() {vs.addElement(v);})* <RBRC>
+     {return new ASTClass(name.image, vs, name.beginLine);}
+}
+
+ASTFormals formal(ASTFormals formals) : 
+{Token t; Token t2; int dim = 0; ASTFormal formal;}
+{
+	t = <ID> t2 = <ID> (<LBRCK><RBRCK> {dim++;})* 
+	{formal = new ASTFormal(t.image, t2.image, dim, t.beginLine); formals.addElement(formal); dim = 0;} 
+	( <COMMA> t = <ID> t2 = <ID> (<LBRCK><RBRCK> {dim++;})* 
+	{formal = new ASTFormal(t.image, t2.image, dim, t.beginLine); formals.addElement(formal); dim = 0;} )*
+	{return formals;} 
+
+|	{} {return formals;}
+}
+
+ASTFunctionDefinition funcDecs() : 
+{Token type; Token name; ASTFormals formals; ASTStatement s; ASTStatements ss;}
+{
+     {formals = new ASTFormals();}
+     type = <ID> name = <ID> <LP> formals = formal(formals) <RP> 
+     ( <SCOLON> {return new ASTPrototype(type.image, name.image, formals, type.beginLine);} 
+     | {ss = new ASTStatements();} 
+     <LBRC> ( s = state() {ss.addElement(s);} )* <RBRC> 
+     {return new ASTFunction(type.image, name.image, formals, ss, type.beginLine);} )
+}
+
+ASTFunctionCallExpression actual(ASTFunctionCallExpression func) :
+{ASTExpression e = null;}
+{
+	e = exp() {func.addElement(e);} ( <COMMA> e = exp() {func.addElement(e);})* {return func;}
+
+|	{} {return func;}
+}
+
+ASTExpression varsAndFuncs(Token tok) :
+{Token var; ASTExpression e = null; ASTVariable build; ASTFunctionCallExpression func;}
+{
+      <DOT> var = <ID> {build = new ASTClassVariable(new ASTBaseVariable(tok.image, tok.beginLine), var.image, var.beginLine);} 
+      ( 
+          (<DOT> var = <ID>) {build = new ASTClassVariable(build, var.image, var.beginLine);} 
+          | (<LBRCK> (e = exp())? <RBRCK>) {build = new ASTArrayVariable(build, e, tok.beginLine);} 
+      )* 
+      {return new ASTVariableExpression(build, var.beginLine);}
+
+|     <LBRCK> (e = exp())? <RBRCK> {build = new ASTArrayVariable(new ASTBaseVariable(tok.image, tok.beginLine), e, tok.beginLine);} 
+	  ( 
+	      <LBRCK> (e = exp())? <RBRCK> {build = new ASTArrayVariable(build, e, tok.beginLine);} 
+	      | <DOT> var = <ID> {build = new ASTClassVariable(build, var.image, var.beginLine);} 
+	  )*
+	  {return new ASTVariableExpression(build, tok.beginLine);}
+
+|	  <LP> {func = new ASTFunctionCallExpression(tok.image, tok.beginLine);} func = actual(func) <RP> {return func;}
+
+|	  {} {return new ASTVariableExpression(new ASTBaseVariable(tok.image, tok.beginLine), tok.beginLine);}
+}
+
+ASTExpression exp() :
+{ASTExpression e;}
+{	 
+     e = disjunct() {return e;}
+}
+
+ASTExpression disjunct() :
+{ASTExpression result; Token t; ASTExpression rhs;}
+{
+     result = conjunct() ( t = <OR> rhs = conjunct() 
+     {result = new ASTOperatorExpression(result, rhs, t.image, t.beginLine);} )* {return result;}
+}
+
+ASTExpression conjunct() :
+{ASTExpression result; Token t; ASTExpression rhs;}
+{
+     result = negate() ( t = <AND> rhs = negate() 
+     {result = new ASTOperatorExpression(result, rhs, t.image, t.beginLine);} )* {return result;}
+}
+
+ASTExpression negate() :
+{ASTExpression result; Token t;}
+{
+     t = <NOT> result = negate() {return new ASTUnaryOperatorExpression(result, t.image, t.beginLine);}
+|	 result = compare() {return result;} 
+}
+
+ASTExpression compare() :
+{ASTExpression result; Token t; ASTExpression rhs;}
+{
+     result = addSub() ( 
+     				       ( t = <EQUAL> | t = <NEQ> | t = <LESS> | t = <LEQ> | t = <GREAT> | t = <GEQ> )  
+					       rhs = addSub() {result = new ASTOperatorExpression(result, rhs, t.image, t.beginLine);} 
+    				   )* 
+     {return result;}
+}
+
+ASTExpression addSub() :
+{ASTExpression result; Token t; ASTExpression rhs;}
+{
+     result = multDiv() ( (t = <PLUS> | t = <MINUS>) rhs = multDiv() 
+     {result = new ASTOperatorExpression(result, rhs, t.image, t.beginLine);} )* {return result;}
+}
+
+ASTExpression multDiv() :
+{ASTExpression result; Token t; ASTExpression rhs;}
+{
+     result = negative() ( (t = <TIMES> | t = <DIVIDE>) rhs = negative() 
+     {result = new ASTOperatorExpression(result, rhs, t.image, t.beginLine);} )* {return result;}
+}
+
+ASTExpression negative() :
+{ASTExpression result; Token t;}
+{
+     t = <MINUS> result = negative() {return new ASTOperatorExpression(new ASTIntegerLiteral(0, t.beginLine), result, t.image, t.beginLine);}
+|	 result = level1() {return result;}
+}
+
+ASTExpression level1() :
+{Token t; ASTExpression e; int dim = 0;}
+{
+	 t = <INT_LIT> {return new ASTIntegerLiteral(Integer.parseInt(t.image), t.beginLine);}
+|	 t = <T> {return new ASTBooleanLiteral(true, t.beginLine);}
+|	 t = <F> {return new ASTBooleanLiteral(false, t.beginLine);}
+|	 <NEW> t = <ID> (
+					    <LP> <RP> {return new ASTNewClassExpression(t.image, t.beginLine);} 
+					    | (<LBRCK> e = exp() <RBRCK> {dim++;}) (<LBRCK><RBRCK> {dim++;})* {return new ASTNewArrayExpression(t.image, e, dim, t.beginLine);} 
+					)
+|	 <LP> (e = exp()) <RP> {return e;}
+|	 t = <READ> <LP> <RP> {return new ASTFunctionCallExpression(t.image, t.beginLine);}
+|	 t = <ID> e = varsAndFuncs(t) {return e;}
+}
+
+ASTStatement state() :
+{ASTStatements ss; ASTStatement s; ASTVariable var; ASTExpression e = null; Token t;}
+{	
+  	<LBRC> {ss = new ASTStatements();} (s = state() {ss.addElement(s);})* <RBRC> {return ss;}
+|   s = ifState() {return s;} 
+|	s = whileLoop() {return s;} 
+|   s = doState() {return s;}
+|	s = forLoop() {return s;}
+|   t = <RETURN_> ( (e = exp())? <SCOLON> {return new ASTReturnStatement(e, t.beginLine);} ) 
+|	t = <PRINT> <LP> e = exp() <RP> <SCOLON> {return new ASTFunctionCallStatement(t.image, e, t.beginLine);}
+|	t = <PRINTLN> <LP> <RP> <SCOLON> {return new ASTFunctionCallStatement(t.image, t.beginLine);}
+|	t = <ID> ( s = varDefState(t) | var = otherState(t) s = otherHelper(var, t) ) {return s;}  
+}
+
+ASTStatement varDefState(Token t) :
+{Token tok; ASTExpression e; int dim = 0; ASTVariableDefStatement s;}
+{
+      tok = <ID> (<LBRCK> <RBRCK> {dim++;})* 
+      {s = new ASTVariableDefStatement(t.image, tok.image, dim, t.beginLine);} 
+      (<GETS> e = exp() <SCOLON> {s.setinit(e);} | <SCOLON>)
+      {return s;}   
+}
+
+ASTVariable otherState(Token t) :
+{Token tok; ASTExpression e = null; ASTVariable var = new ASTBaseVariable(t.image, t.beginLine);}
+{
+	  {var = new ASTBaseVariable(t.image, t.beginLine);}
+ 	  ( (<DOT> tok = <ID> {var = new ASTClassVariable(var, tok.image, t.beginLine);}) 
+ 	  | (<LBRCK> (e = exp())? <RBRCK> {var = new ASTArrayVariable(var, e, t.beginLine);}) )*
+ 	  {return var;}
+}
+
+ASTStatement otherHelper(ASTVariable var, Token tok) : 
+{Token t; ASTExpression e; ASTExpression e2; ASTFunctionCallStatement func; ASTVariableExpression varExp;}
+{
+     
+	 ( t = <PLUS> <PLUS> | t = <MINUS> <MINUS> ) <SCOLON> 
+	 {varExp = new ASTVariableExpression(var, tok.beginLine);}
+	 {e2 = new ASTOperatorExpression(varExp, new ASTIntegerLiteral(1, tok.beginLine), t.image, t.beginLine);}
+	 {return new ASTAssignmentStatement(var, e2, tok.beginLine);}
+
+|	 t = <GETS> e = exp() <SCOLON> {return new ASTAssignmentStatement(var, e, t.beginLine);}
+
+|	 <LP> {func = new ASTFunctionCallStatement(tok.image, tok.beginLine);} 
+	 (e = exp() {func.addElement(e);} (<COMMA> e = exp() {func.addElement(e);})*)? <RP> <SCOLON> 
+	 {return func;}
+
+}
+
+ASTStatement ifState() : 
+{Token t; ASTExpression e; ASTStatement then; ASTStatement optional = null;}
+{
+     t = <IF> <LP> e = exp() <RP> then = state() 
+     ( LOOKAHEAD(1) <ELSE> optional = state() )?
+     {return new ASTIfStatement(e, then, optional, t.beginLine);}
+}
+
+ASTStatement whileLoop() : 
+{Token t; ASTExpression e; ASTStatement test;}
+{
+     t = <WHILE> <LP> e = exp() <RP> test = state() 
+     {return new ASTWhileStatement(e, test, t.beginLine);}
+}
+
+ASTStatement doState() :
+{Token t; ASTExpression e; ASTStatement body;}
+{
+    t = <DO> body = state() <WHILE> <LP> e = exp() <RP> <SCOLON> 
+    {return new ASTDoWhileStatement(e, body, t.beginLine);}
+}
+
+ASTStatement forLoop() :
+{Token t; Token t2; ASTStatement init; ASTExpression test; ASTStatement incr; ASTStatement body;}
+{
+	t = <FOR> <LP> init = flHelper() test = exp() <SCOLON> incr = flHelper() <RP> 
+	( body = state() | t2 = <SCOLON> {body = new ASTEmptyStatement(t2.beginLine);} ) 
+	{return new ASTForStatement(init, test, incr, body, t.beginLine);}
+}
+
+ASTStatement flHelper() : 
+{Token t; Token op; ASTStatement build;}
+{
+     t = <ID> build = flHelper2(t) {return build;}
+|	 op = <SCOLON> {return new ASTEmptyStatement(op.beginLine);} 
+}
+
+ASTStatement flHelper2(Token t) : 
+{Token op; ASTExpression e; ASTExpression e2; ASTVariableExpression varExp;}
+{
+     <GETS> e = exp() (<SCOLON>)? 
+     {return new ASTAssignmentStatement(new ASTBaseVariable(t.image, t.beginLine), e, t.beginLine);} 
+     
+|    op = <PLUS> <PLUS>
+	 {varExp = new ASTVariableExpression(new ASTBaseVariable(t.image, t.beginLine), t.beginLine);} 
+	 {e2 = new ASTOperatorExpression(varExp, new ASTIntegerLiteral(1, t.beginLine), op.image, t.beginLine);}
+	 {return new ASTAssignmentStatement(new ASTBaseVariable(t.image, t.beginLine), e2, t.beginLine);}
+	 
+|    op = <MINUS> <MINUS> 
+	 {varExp = new ASTVariableExpression(new ASTBaseVariable(t.image, t.beginLine), t.beginLine);} 
+	 {e2 = new ASTOperatorExpression(new ASTIntegerLiteral(1, t.beginLine), varExp, op.image, t.beginLine);}
+	 {return new ASTAssignmentStatement(new ASTBaseVariable(t.image, t.beginLine), e2, t.beginLine);}
+}
