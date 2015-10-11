@@ -156,7 +156,8 @@ int GetN(int argc, char* argv[]) {
 
    if (argc != 2) {
 	Usage(argv[0]);
-	MPI_Finalize();		
+	MPI_Finalize();	
+	exit(0);
    }
    
    n = strtol(argv[1], NULL, 10); /* Convert string to int */
@@ -164,6 +165,7 @@ int GetN(int argc, char* argv[]) {
    if (n <= 1) { /* Check for bogus input */ 
 	Usage(argv[0]);
 	MPI_Finalize();
+	exit(0);
    }
 
    return n;
