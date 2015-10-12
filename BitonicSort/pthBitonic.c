@@ -23,7 +23,7 @@
 /* shared variables */
 int *list, *tmp;
 int threadCount, n;
-const int RMAX = 999999;
+const int RMAX = 1000000;
 int barrierThreadCount = 0;
 pthread_mutex_t barrierMutex;
 pthread_cond_t proceed;
