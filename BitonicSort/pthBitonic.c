@@ -338,7 +338,7 @@ void BitonicSort(long thread, int partner, int phase,
 /*-------------------------------------------------------------------
  * Function:    ThreadWork
  * Purpose:     Synchronize phases of butterfly communication 
- *				amongst the threads.
+ *		amongst the threads.
  * In arg:      rank
  * Global var:  threadCount, barrierThreadCount, barrierMutex,
  *              proceed
