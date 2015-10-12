@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
 	printf("Elapsed time = %e seconds\n", finish - start);
 
 	pthread_mutex_destroy(&barrierMutex);
-    pthread_cond_destroy(&proceed);
+    	pthread_cond_destroy(&proceed);
 	free(tmp);
 	free(list);
 	free(threadHandles);
