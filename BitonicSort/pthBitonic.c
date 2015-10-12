@@ -5,9 +5,9 @@
  *           and a logical partition of the list.
  *
  * Input:    threadCount: integer number of threads (power of 2)
- *			 n: integer (evenly divisible by threadCount)
- *			 g: char (optional flag) generate pseudorandom list 
- *			 o: char (optional flag) print original/final lists
+ *		       n: integer (evenly divisible by threadCount)
+ *		       g: char (optional flag) generate pseudorandom list 
+ *		       o: char (optional flag) print original/final lists
  * Output:   Sorted list (optional)
  *
  * Compile:  gcc -g -Wall -o pb pthBitonic.c -lpthread -DDEBUG
@@ -297,8 +297,8 @@ void Barrier() {
 /*-------------------------------------------------------------------
  * Function:    BitonicSort
  * Purpose:     Compute sequence of thread's sublist, 
- *				do corresponding split with partner, 
- *				copy split into shared list. 
+ *		do corresponding split with partner, 
+ *		copy split into shared list. 
  * In arg:      rank, partner, phase, andBit
  * Return val:  Ignored
  */
