@@ -157,10 +157,10 @@ void CheckInput(int argc, char* argv[], int* print) {
  * Purpose:   Use random number generator to generate list elements
  */
 void GenerateList() {
-   int i;
+    int i;
 
-   srandom(1);
-   for (i = 0; i < n; i++) list[i] = random() % RMAX;
+    srandom(1);
+    for (i = 0; i < n; i++) list[i] = random() % RMAX;
 }  /* GenerateList */
 
 /*------------------------------------------------------------------
@@ -168,9 +168,9 @@ void GenerateList() {
  * Purpose:     Read in the list
  */
 void ReadList() {
-	int i;
+    int i;
 
-	printf("%s ", "Enter list:");
+    printf("%s ", "Enter list:");
     for (i = 0; i < n; i++) scanf("%d", &list[i]);
 }  /* ReadList */
 
@@ -283,7 +283,7 @@ void SplitHigh(int head1, int head2) {
  * Return val:  Ignored
  */
 void Barrier() {
-	pthread_mutex_lock(&barrierMutex);
+    pthread_mutex_lock(&barrierMutex);
     barrierThreadCount++;
     if (barrierThreadCount == threadCount) {
     	barrierThreadCount = 0;
