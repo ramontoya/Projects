@@ -345,17 +345,17 @@ void BitonicSort(long thread, int partner, int phase,
  * Return val:  Ignored
  */
 void *ThreadWork(void* rank) {
-	long thread = (long) rank; 
-	unsigned bitmask = 1;
+    long thread = (long) rank; 
+    unsigned bitmask = 1;
     unsigned andBit = 2;
-   	unsigned reverse;
+    unsigned reverse;
     int partner, revPartner, phase, size;
 
     size = n/threadCount;
 
     /* q-sort logical partition */
-	qsort(&list[thread*(size)], size, sizeof(int), Compare);
-	Barrier();
+    qsort(&list[thread*(size)], size, sizeof(int), Compare);
+    Barrier();
 
     while(bitmask < threadCount) {
     	/* butterfly phase */
@@ -368,13 +368,13 @@ void *ThreadWork(void* rank) {
     	/* ENTER REVERSE BUTTERFLY */
     	reverse = bitmask;
     	while(reverse > 1) {
-    		phase++;
-    		/* right-shift */
-    		reverse >>= 1; 
-    		/* partner */
-    		revPartner = thread ^ reverse;
-    		/* bitonic-sort */
-    		BitonicSort(thread, revPartner, phase, andBit);
+    	    phase++;
+    	    /* right-shift */
+    	    reverse >>= 1; 
+    	    /* partner */
+    	    revPartner = thread ^ reverse;
+    	    /* bitonic-sort */
+    	    BitonicSort(thread, revPartner, phase, andBit);
     	}
     	/* EXIT REVERSE BUTTERFLY */
 
